@@ -1,0 +1,34 @@
+docker run --name postgresdb -e POSTGRES_PASSWORD=PassWord1 -p 54321:5432 -d robcult/stofferdb
+
+# This image includes EXPOSE 5432 (the postgres port), so standard container linking will make it 
+# automatically available to the linked containers. 
+# The default postgres user and database are created in the entrypoint with initdb.
+
+docker stop postgresdb 
+docker rm postgresdb
+docker rmi healthpostgres-image
+docker build -t="healthpostgres-image" .
+
+docker run  --name postgresdb -e POSTGRES_PASSWORD=PassWord1 -p 54321:5432 -d healthpostgres-image
+
+# The official postgres docker image will run .sql scripts found in the /docker-entrypoint-initdb.d/ folder.
+docker exec -i -t postgresdb /bin/bash
+root@fa4029504afd:/# /usr/bin/psql health -U postgres
+
+drop table lokale, produkter, produkter_save, produkter_stofline, produkter_stofline_save, sds, stoffer_bad, stoffer_save;
+
+psql -U postgres -d health -a -f Renestoffer.sql
+
+health=# select count(*) from health1.renestoffer;
+ count 
+-------
+ 15716
+
+docker cp postgresdb:/health.sql .
+
+# Rebuild the container with health.sql in the init folder
+
+# Now commit and push the image
+#docker commit postgresdb stofferdb
+docker tag healthpostgres-image robcult/stofferdb
+docker push robcult/stofferdb
